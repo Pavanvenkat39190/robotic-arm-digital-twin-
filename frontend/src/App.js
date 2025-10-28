@@ -7,8 +7,9 @@ import { ShieldCheck, Cpu, Bell, Wrench, Clock, AlertTriangle, Zap, Battery, Gau
 
 // --- NEW ---
 // Connect to the backend server
-const socket = io('http://localhost:4000');
-const API_URL = 'http://localhost:4000';
+const backendUrl = 'https://industrial-robotic-arm-digital-twin.onrender.com'; // Your Render URL
+const socket = io(backendUrl);
+const API_URL = backendUrl;
 // --- END NEW ---
 
 
