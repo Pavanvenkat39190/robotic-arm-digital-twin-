@@ -5,31 +5,32 @@ import * as THREE from 'three'; // Import THREE for materials if needed
 
 // Helper component for a single arm segment + joint
 function ArmSegment({ position, rotation, length, radius, jointRadius, color, jointColor, children }) {
-  // Rotation needs to be converted from degrees (backend) to radians (Three.js)
-  // Apply rotation order YXZ as it's common for robotic arms (adjust if needed)
+  // --- FIX: Add default value and ensure rotation is an array ---
+  const validRotation = Array.isArray(rotation) ? rotation : [0, 0, 0]; // Default if prop is bad
+  // --- END FIX ---
+
+  // Rotation needs to be converted from degrees to radians
+  // Apply rotation order YXZ (adjust if your model needs XYZ, etc.)
   const rotationRadians = new THREE.Euler(
-    (rotation[0] * Math.PI) / 180, // X rotation (usually pitch/bend)
-    (rotation[1] * Math.PI) / 180, // Y rotation (usually yaw/base rotation)
-    (rotation[2] * Math.PI) / 180, // Z rotation (usually roll/twist)
-    'YXZ' // Specify the order of rotations
+    (validRotation[0] * Math.PI) / 180, // X rotation
+    (validRotation[1] * Math.PI) / 180, // Y rotation
+    (validRotation[2] * Math.PI) / 180, // Z rotation
+    'YXZ' // Rotation order
   );
 
   return (
-    // Group applies the rotation and then the position offset relative to its parent
     <group position={position} rotation={rotationRadians}>
       {/* Joint */}
       <Sphere args={[jointRadius, 16, 16]} position={[0, 0, 0]}>
-        {/* Adjusted material for less shine */}
         <meshStandardMaterial color={jointColor || '#888888'} roughness={0.7} metalness={0.2} />
       </Sphere>
-      {/* Arm Link - Positioned half its length along the Y-axis from the joint */}
+      {/* Arm Link */}
       {length > 0 && (
         <Cylinder args={[radius, radius, length, 16]} position={[0, length / 2, 0]}>
-          {/* Adjusted material for less shine */}
           <meshStandardMaterial color={color || '#555555'} roughness={0.8} metalness={0.1} />
         </Cylinder>
       )}
-      {/* Nested children (next segment) will be positioned relative to this joint */}
+      {/* Nested children */}
       {children}
     </group>
   );
