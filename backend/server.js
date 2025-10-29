@@ -151,7 +151,7 @@ function runSimulation() {
 
 // Start the simulation loop
 generateInitialData(20);
-const latestData = data[data.length - 1];
+const latestData = data.length > 0 ? data[data.length - 1] : {}; // Ensure latestData exists
 health = Math.min(lifetimeHealth, calculateStateHealth(latestData, faults)); // Initialize health correctly
 setInterval(runSimulation, 3000);
 
@@ -224,7 +224,8 @@ io.on('connection', (socket) => {
     generateInitialData(20);
 
     // Recalculate health on restart
-    const stateHealth = calculateStateHealth(data[data.length - 1], faults);
+    const currentLatestData = data.length > 0 ? data[data.length - 1] : {}; // Ensure latest data exists
+    const stateHealth = calculateStateHealth(currentLatestData, faults);
     health = Math.min(lifetimeHealth, stateHealth);
 
     addLog("INFO", "System restarted successfully");
