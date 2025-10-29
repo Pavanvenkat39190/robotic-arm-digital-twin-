@@ -1,11 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Keep useRef for Canvas
 import io from 'socket.io-client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { ShieldCheck, Cpu, Bell, Wrench, Clock, AlertTriangle, Zap, Battery, Gauge, ChevronDown, ChevronUp, Box, Radio, Sun, Moon } from 'lucide-react';
-// Import 3D libraries directly here
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Cylinder, Sphere, Box as DreiBox } from '@react-three/drei'; // Renamed Box to DreiBox
-import * as THREE from 'three';
 
 // --- Connect to the backend server ---
 const backendUrl = 'https://industrial-robotic-arm-digital-twin.onrender.com'; // Your Render URL
@@ -13,96 +9,43 @@ const socket = io(backendUrl);
 const API_URL = backendUrl;
 // --- END ---
 
-// --- 3D Arm Component Code (Moved Inside) ---
+// --- Canvas Drawing Helper Functions ---
+const drawCylinder = (ctx, x, y, width, height, color, shadowColor, isHighlight, isDarkMode) => {
+    const fillColor = isDarkMode ? shadowColor : color;
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x, y, width, height);
+    if (isHighlight) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
+    }
+     ctx.fillStyle = isDarkMode ? '#6b7280' : '#1e293b';
+     for (let i = 0; i < 3; i++) {
+       ctx.fillRect(x + width * 0.2, y + height * (0.25 + i * 0.25), width * 0.6, 2);
+     }
+};
 
-// Helper component for a single arm segment + joint
-function ArmSegment({ position, rotation, length, radius, jointRadius, color, jointColor, children }) {
-  // FIX: Add default value and ensure rotation is an array
-  const validRotation = Array.isArray(rotation) ? rotation : [0, 0, 0];
+const drawJoint = (ctx, x, y, radius, color, label, isHighlight, isDarkMode) => {
+    const jointColor = isDarkMode ? '#6b7280' : color;
+    ctx.fillStyle = jointColor;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Rotation needs to be converted from degrees (backend) to radians (Three.js)
-  const rotationRadians = new THREE.Euler(
-    (validRotation[0] * Math.PI) / 180, // X rotation
-    (validRotation[1] * Math.PI) / 180, // Y rotation
-    (validRotation[2] * Math.PI) / 180, // Z rotation
-    'YXZ' // Rotation order
-  );
+     if (isHighlight) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+        ctx.stroke();
+    }
 
-  return (
-    <group position={position} rotation={rotationRadians}>
-      <Sphere args={[jointRadius, 16, 16]} position={[0, 0, 0]}>
-        <meshStandardMaterial color={jointColor || '#888888'} roughness={0.7} metalness={0.2} />
-      </Sphere>
-      {length > 0 && (
-        <Cylinder args={[radius, radius, length, 16]} position={[0, length / 2, 0]}>
-          <meshStandardMaterial color={color || '#555555'} roughness={0.8} metalness={0.1} />
-        </Cylinder>
-      )}
-      {children}
-    </group>
-  );
-}
-
-// Main 3D Arm Component
-function RoboticArm3D({ jointData, isDarkMode }) {
-  const angles = {
-    j1: jointData?.j1_angle ?? 0,
-    j2: jointData?.j2_angle ?? 0,
-    j3: jointData?.j3_angle ?? 0,
-    j4: jointData?.j4_angle ?? 0,
-    j5: jointData?.j5_angle ?? 0,
-    j6: jointData?.j6_angle ?? 0,
-  };
-
-  const segmentLength1 = 1.0; const segmentLength2 = 0.8; const segmentLength3 = 0.6;
-  const segmentLength4 = 0.4; const segmentLength5 = 0.3; const segmentLength6 = 0.15;
-  const radius = 0.08; const jointRadius = 0.12;
-
-  return (
-    <Canvas
-        camera={{ position: [2.5, 2, 2.5], fov: 50 }}
-        style={{ background: 'var(--color-bg-tertiary)', borderRadius: '16px', border: `1px solid var(--color-border)` }}
-        shadows
-    >
-      <ambientLight intensity={isDarkMode ? 0.4 : 0.7} />
-      <directionalLight position={[5, 8, 5]} intensity={isDarkMode ? 0.8 : 1.2} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-      <directionalLight position={[-5, -3, -2]} intensity={isDarkMode ? 0.3 : 0.5} />
-      <hemisphereLight intensity={isDarkMode ? 0.2 : 0.4} groundColor={isDarkMode ? "#333" : "#aaa"} />
-      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
-      <Cylinder args={[0.4, 0.4, 0.2, 32]} position={[0, 0.1, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color={isDarkMode ? "#374151" : "#6b7280"} roughness={0.7} metalness={0.2} />
-      </Cylinder>
-      <ArmSegment position={[0, 0.2, 0]} rotation={[0, angles.j1, 0]} length={segmentLength1} radius={radius} jointRadius={jointRadius} color={isDarkMode ? "#4b5563": "#6b7280"} jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-        <ArmSegment position={[0, segmentLength1, 0]} rotation={[0, 0, angles.j2]} length={segmentLength2} radius={radius * 0.9} jointRadius={jointRadius * 0.9} color="#3b82f6" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-          <ArmSegment position={[0, segmentLength2, 0]} rotation={[0, 0, angles.j3]} length={segmentLength3} radius={radius * 0.8} jointRadius={jointRadius * 0.8} color="#10b981" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-            <ArmSegment position={[0, segmentLength3, 0]} rotation={[0, angles.j4, 0]} length={segmentLength4} radius={radius * 0.7} jointRadius={jointRadius * 0.7} color="#f59e0b" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-              <ArmSegment position={[0, segmentLength4, 0]} rotation={[0, 0, angles.j5]} length={segmentLength5} radius={radius * 0.6} jointRadius={jointRadius * 0.6} color="#ef4444" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-                <ArmSegment position={[0, segmentLength5, 0]} rotation={[0, angles.j6, 0]} length={segmentLength6} radius={radius * 0.5} jointRadius={jointRadius * 0.5} color={isDarkMode ? "#4b5563": "#6b7280"} jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-                  <group position={[0, segmentLength6 + 0.05, 0]}>
-                    <DreiBox args={[0.12, 0.08, 0.12]} position={[0, 0, 0]} castShadow>
-                       <meshStandardMaterial color={isDarkMode ? "#9ca3af" : "#4b5563"} roughness={0.8}/>
-                    </DreiBox>
-                     <DreiBox args={[0.03, 0.12, 0.03]} position={[-0.045, -0.06, 0]} castShadow>
-                       <meshStandardMaterial color={isDarkMode ? "#e5e7eb" : "#d1d5db"} metalness={0.8} roughness={0.3}/>
-                     </DreiBox>
-                      <DreiBox args={[0.03, 0.12, 0.03]} position={[0.045, -0.06, 0]} castShadow>
-                       <meshStandardMaterial color={isDarkMode ? "#e5e7eb" : "#d1d5db"} metalness={0.8} roughness={0.3}/>
-                     </DreiBox>
-                  </group>
-                </ArmSegment>
-              </ArmSegment>
-            </ArmSegment>
-          </ArmSegment>
-        </ArmSegment>
-      </ArmSegment>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[10, 10]} />
-        <meshStandardMaterial color={isDarkMode ? "#111827" : "#d1d5db"} roughness={0.9} />
-      </mesh>
-    </Canvas>
-  );
-}
-// --- END 3D Arm Component Code ---
+    ctx.fillStyle = isDarkMode ? '#e2e8f0' : '#111827';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x, y + radius + 15);
+};
+// --- End Canvas Helpers ---
 
 
 // --- Helper Components ---
@@ -158,7 +101,7 @@ function FaultBadge({ status }) {
 }
 // --- End Helper Components ---
 
-// --- Main App Component ---
+
 export default function App() {
   const [data, setData] = useState([]);
   const [health, setHealth] = useState(100);
@@ -180,14 +123,23 @@ export default function App() {
     return savedMode ? JSON.parse(savedMode) : false;
   });
 
+  // Canvas related state and ref
+  const canvasRef = useRef(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedJoint, setSelectedJoint] = useState(null);
+
+  // Apply theme class
   useEffect(() => {
     if (isDarkMode) { document.body.classList.add('dark-mode'); }
     else { document.body.classList.remove('dark-mode'); }
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
+  // Toggle theme
   const toggleTheme = () => { setIsDarkMode(prevMode => !prevMode); };
 
+  // Socket connection
    useEffect(() => {
     function onConnect() { console.log('Connected:', socket.id); setAlert({ message: "✅ Connected" }); }
     function onDisconnect(reason) { console.log('Disconnected:', reason); setAlert({ message: "⚠️ Disconnected" }); }
@@ -213,8 +165,71 @@ export default function App() {
     };
   }, [isShutdown]);
 
-  const latest = data.length > 0 ? data[data.length - 1] : {};
+  // Get latest data point
+   const latest = data.length > 0 ? data[data.length - 1] : {};
 
+   // Canvas drawing useEffect
+   useEffect(() => {
+     const canvas = canvasRef.current;
+     if (!canvas || !latest.time) return;
+
+     const ctx = canvas.getContext('2d');
+     const canvasWidth = canvas.width;
+     const canvasHeight = canvas.height;
+     const centerX = canvasWidth / 2;
+     const centerY = canvasHeight / 2 + 100; // Adjusted Position
+
+     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+     ctx.strokeStyle = isDarkMode ? '#374151' : '#e5e7eb'; ctx.lineWidth = 0.5;
+     for (let i = 0; i < canvasWidth; i += 30) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvasHeight); ctx.stroke(); }
+     for (let i = 0; i < canvasHeight; i += 30) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvasWidth, i); ctx.stroke(); }
+
+     ctx.fillStyle = isDarkMode ? '#4b5563' : '#6b7280'; ctx.beginPath(); ctx.arc(centerX, centerY, 40, 0, Math.PI * 2); ctx.fill();
+     ctx.strokeStyle = isDarkMode ? '#1f2937' : '#374151'; ctx.lineWidth = 2; ctx.stroke();
+     ctx.fillStyle = isDarkMode ? '#9ca3af' : '#cbd5e1';
+      for (let i = 0; i < 6; i++) { const angle = (i / 6) * Math.PI * 2; const x = centerX + Math.cos(angle) * 30; const y = centerY + Math.sin(angle) * 30; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); }
+
+     ctx.save(); ctx.translate(centerX, centerY);
+     // J1
+     ctx.save(); ctx.rotate(((latest.j1_angle || 0) * Math.PI) / 180);
+     drawCylinder(ctx, -15, -120, 30, 120, '#3b82f6', '#1e40af', selectedJoint === 1, isDarkMode);
+     drawJoint(ctx, 0, 0, 20, '#94a3b8', 'J1', selectedJoint === 1, isDarkMode);
+     // J2
+     ctx.save(); ctx.translate(0, -120); ctx.rotate(((latest.j2_angle || 0) * Math.PI) / 180);
+     drawCylinder(ctx, -12, -100, 24, 100, '#10b981', '#047857', selectedJoint === 2, isDarkMode);
+     drawJoint(ctx, 0, 0, 18, '#94a3b8', 'J2', selectedJoint === 2, isDarkMode);
+      // J3
+      ctx.save(); ctx.translate(0, -100); ctx.rotate(((latest.j3_angle || 0) * Math.PI) / 180);
+      drawCylinder(ctx, -10, -80, 20, 80, '#8b5cf6', '#6d28d9', selectedJoint === 3, isDarkMode);
+      drawJoint(ctx, 0, 0, 16, '#94a3b8', 'J3', selectedJoint === 3, isDarkMode);
+       // J4
+       ctx.save(); ctx.translate(0, -80); ctx.rotate(((latest.j4_angle || 0) * Math.PI) / 180);
+       drawCylinder(ctx, -8, -60, 16, 60, '#f59e0b', '#b45309', selectedJoint === 4, isDarkMode);
+       drawJoint(ctx, 0, 0, 14, '#94a3b8', 'J4', selectedJoint === 4, isDarkMode);
+        // J5
+        ctx.save(); ctx.translate(0, -60); ctx.rotate(((latest.j5_angle || 0) * Math.PI) / 180);
+        drawCylinder(ctx, -7, -50, 14, 50, '#ef4444', '#b91c1c', selectedJoint === 5, isDarkMode);
+        drawJoint(ctx, 0, 0, 12, '#94a3b8', 'J5', selectedJoint === 5, isDarkMode);
+         // J6 & EE
+         ctx.save(); ctx.translate(0, -50); ctx.rotate(((latest.j6_angle || 0) * Math.PI) / 180);
+         drawCylinder(ctx, -6, -40, 12, 40, '#6b7280', '#475569', selectedJoint === 6, isDarkMode);
+         drawJoint(ctx, 0, 0, 10, '#94a3b8', 'J6', selectedJoint === 6, isDarkMode);
+          ctx.translate(0, -40); ctx.fillStyle = isDarkMode ? '#cbd5e1' : '#374151'; ctx.fillRect(-10, -20, 20, 20);
+          ctx.beginPath(); ctx.moveTo(-10, -20); ctx.lineTo(-15, -35); ctx.stroke(); ctx.moveTo(10, -20); ctx.lineTo(15, -35); ctx.stroke();
+         ctx.restore(); ctx.restore(); ctx.restore(); ctx.restore(); ctx.restore(); ctx.restore(); ctx.restore();
+   }, [latest, selectedJoint, isDarkMode]);
+
+  // Canvas Event Handlers
+  const handleCanvasMouseDown = (e) => {
+     const canvas = canvasRef.current; if(!canvas) return; const rect = canvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top; const centerX = canvas.width / 2; const centerY = canvas.height / 2 + 100;
+     let clickedJoint = null;
+     if (Math.sqrt((x - centerX)**2 + (y - centerY)**2) < 30) clickedJoint = 1; else if (y < centerY - 100 && y > centerY - 160) clickedJoint = 2; else if (y < centerY - 200 && y > centerY - 260) clickedJoint = 3; else if (y < centerY - 260 && y > centerY - 310) clickedJoint = 4; else if (y < centerY - 310 && y > centerY - 350) clickedJoint = 5; else if (y < centerY - 350) clickedJoint = 6;
+     setSelectedJoint(clickedJoint); setIsDragging(false); console.log("Clicked near joint (visual only):", clickedJoint);
+  };
+  const handleCanvasMouseMove = (e) => { /* Dragging disabled */ };
+  const handleCanvasMouseUp = () => { setIsDragging(false); };
+
+  // Backend interaction functions
     const addLog = async (severity, message) => { try { await fetch(`${API_URL}/api/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ severity, message }), }); } catch (error) { console.error("Failed addLog:", error); setAlert({ message: "⚠️ Err comm (addLog)" }); } };
     const sendNotif = () => { if (!notificationSent) { setNotificationSent(true); addLog("INFO", "Notification sent."); setTimeout(() => setNotificationSent(false), 5000); } };
     const toggleFault = (faultType) => { if (isShutdown) return; socket.emit('toggleFault', faultType); };
@@ -300,15 +315,36 @@ export default function App() {
                     <h3 style={{ marginTop: 0, marginBottom: "1.5rem", color: "var(--color-text-primary)" }}>
                       6-Axis Joint Visualization & Data
                     </h3>
-                    {/* --- Use 3D Component --- */}
-                    <div style={{ height: '500px', width: '100%', marginBottom: '2rem', background: 'var(--color-bg)', borderRadius: '16px', border: '1px solid var(--color-border)', position: 'relative' }}>
-                      {latest.time ? (
-                        <RoboticArm3D jointData={latest} isDarkMode={isDarkMode} />
-                      ) : (
-                        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-secondary)'}}>Loading 3D Model...</div>
-                      )}
+                    {/* --- Canvas Visualization --- */}
+                    <div style={{ background: isDarkMode ? "#0f172a" : "#1f2937", borderRadius: "16px", padding: "1rem", marginBottom: "2rem", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: "400px", border: `1px solid var(--color-border)` }}>
+                       <p style={{color: "var(--color-text-muted)", fontSize: "0.8rem", margin: "0 0 0.5rem 0"}}>Click near joints to highlight</p>
+                       <canvas
+                         ref={canvasRef}
+                         width={400}
+                         height={500}
+                         style={{ width: "100%", maxWidth: "400px", background: "transparent", borderRadius: "8px", cursor: "pointer" }}
+                         onMouseDown={handleCanvasMouseDown}
+                         onMouseMove={handleCanvasMouseMove}
+                         onMouseUp={handleCanvasMouseUp}
+                         onMouseLeave={handleCanvasMouseUp}
+                       />
+                        <div style={{marginTop: "1rem", display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', width: '100%', maxWidth: '400px'}}>
+                            {[1, 2, 3, 4, 5, 6].map(j => (
+                                <button
+                                key={j}
+                                onClick={() => setSelectedJoint(selectedJoint === j ? null : j)}
+                                style={{
+                                    padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600,
+                                    background: selectedJoint === j ? 'var(--color-warning)' : 'var(--color-bg-tertiary)',
+                                    color: selectedJoint === j ? 'var(--color-warning-text)' : 'var(--color-text-secondary)',
+                                    border: `1px solid ${selectedJoint === j ? 'var(--color-warning)' : 'var(--color-border)'}`
+                                }}
+                                >
+                                J{j}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    {/* --- End 3D Component --- */}
 
                     {/* Joint Charts */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
