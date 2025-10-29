@@ -15,13 +15,9 @@ const io = new Server(server, {
   }
 });
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000; // Use environment variable for port
 
 // --- STATE MANAGEMENT (Source of Truth) ---
-<<<<<<< HEAD
-// This is the server's "memory" of the digital twin's state.
-=======
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 let data = [];
 let maintenanceLog = [];
 let isShutdown = false;
@@ -34,12 +30,9 @@ let faults = {
   commDelay: 'OK'
 };
 let health = 100;
-<<<<<<< HEAD
-=======
-let lifetimeHealth = 100; // --- NEW: Tracks gradual wear and tear ---
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
+let lifetimeHealth = 100; // --- Tracks gradual wear and tear ---
 
-// --- HELPER FUNCTIONS (Moved from frontend) ---
+// --- HELPER FUNCTIONS ---
 
 function generateInitialData(count) {
   const initialData = [];
@@ -72,14 +65,9 @@ function generateInitialData(count) {
   return initialData;
 }
 
-<<<<<<< HEAD
-function calculateHealth(metrics, currentFaults) {
-  let h = 100;
-=======
-// --- RENAMED: This now calculates health based on *current state* ---
+// Calculates health based on *current state*
 function calculateStateHealth(metrics, currentFaults) {
   let h = 100; // Start at 100 (a perfect *current state*)
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
   if (metrics.motor_temp > 75) h -= (metrics.motor_temp - 75) * 2;
   if (metrics.power > 2000) h -= (metrics.power - 2000) * 0.02;
   if (metrics.anomaly_score > 0.3) h -= (metrics.anomaly_score - 0.3) * 50;
@@ -87,12 +75,7 @@ function calculateStateHealth(metrics, currentFaults) {
     if (fault === 'Critical') h -= 15;
     else if (fault === 'Warning') h -= 5;
   });
-<<<<<<< HEAD
-  health = Math.max(0, Math.min(100, h));
-  return health;
-=======
   return Math.max(0, Math.min(100, h)); // Return the calculated *state* health
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 }
 
 function addLog(severity, message) {
@@ -111,14 +94,10 @@ function addLog(severity, message) {
 function runSimulation() {
   if (isShutdown) return;
 
-<<<<<<< HEAD
-=======
-  // --- NEW: Apply gradual wear and tear ---
-  // This will slowly decrease health every 3 seconds, even if no faults
-  lifetimeHealth -= 0.02; // You can adjust this "wear factor"
+  // Apply gradual wear and tear
+  lifetimeHealth -= 0.02; // Adjust this "wear factor" as needed
   lifetimeHealth = Math.max(0, lifetimeHealth); // Don't let it go below 0
 
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
   const last = data.length > 0 ? data[data.length - 1] : generateInitialData(1)[0];
 
   const newEntry = {
@@ -135,16 +114,16 @@ function runSimulation() {
     ee_x: last.ee_x + (Math.random() - 0.5) * 20,
     ee_y: last.ee_y + (Math.random() - 0.5) * 20,
     ee_z: last.ee_z + (Math.random() - 0.5) * 20,
-    motor_temp: faults.overheating !== 'OK' ? Math.min(95, last.motor_temp + Math.random() * 2) : 
+    motor_temp: faults.overheating !== 'OK' ? Math.min(95, last.motor_temp + Math.random() * 2) :
       Math.max(50, Math.min(85, last.motor_temp + (Math.random() - 0.5) * 5)),
-    power: faults.powerFluctuation !== 'OK' ? last.power + (Math.random() - 0.5) * 400 : 
+    power: faults.powerFluctuation !== 'OK' ? last.power + (Math.random() - 0.5) * 400 :
       Math.max(1000, Math.min(2200, last.power + (Math.random() - 0.5) * 200)),
     current: Math.max(7, Math.min(11, last.current + (Math.random() - 0.5) * 0.8)),
-    rpm: faults.encoderLoss !== 'OK' ? Math.max(0, last.rpm - Math.random() * 100) : 
+    rpm: faults.encoderLoss !== 'OK' ? Math.max(0, last.rpm - Math.random() * 100) :
       Math.max(800, Math.min(1500, last.rpm + (Math.random() - 0.5) * 150)),
-    payload: faults.gripperMalfunction !== 'OK' ? Math.max(0, last.payload - Math.random() * 2) : 
+    payload: faults.gripperMalfunction !== 'OK' ? Math.max(0, last.payload - Math.random() * 2) :
       Math.max(3, Math.min(8, last.payload + (Math.random() - 0.5) * 0.5)),
-    cycle_time: faults.commDelay !== 'OK' ? last.cycle_time + Math.random() * 0.5 : 
+    cycle_time: faults.commDelay !== 'OK' ? last.cycle_time + Math.random() * 0.5 :
       Math.max(2, Math.min(3.5, last.cycle_time + (Math.random() - 0.5) * 0.3)),
     anomaly_score: Math.max(0, Math.min(1, last.anomaly_score + (Math.random() - 0.5) * 0.1)),
   };
@@ -152,43 +131,28 @@ function runSimulation() {
   data.push(newEntry);
   if (data.length > 20) data.shift();
 
-<<<<<<< HEAD
-  const newHealth = calculateHealth(newEntry, faults);
-  
-  if (newHealth <= 0) {
-=======
-  // --- MODIFIED: Combine state health and lifetime health ---
+  // Combine state health and lifetime health
   const stateHealth = calculateStateHealth(newEntry, faults);
   // The system's true health is the *worse* of its lifetime wear or its current state
   health = Math.min(lifetimeHealth, stateHealth);
   health = Math.max(0, Math.min(100, health)); // Clamp the final value
-  
+
   if (health <= 0) {
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
     isShutdown = true;
     addLog("CRITICAL", "Emergency shutdown - Health depleted");
     io.emit('shutdown', "🚨 EMERGENCY SHUTDOWN");
     return;
   }
-  
-<<<<<<< HEAD
-  // Broadcast the new data point to all connected clients
-  io.emit('newData', newEntry);
-  io.emit('healthUpdate', newHealth);
-=======
+
   // Broadcast the new combined data point to all connected clients
   io.emit('newData', newEntry);
   io.emit('healthUpdate', health);
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 }
 
 // Start the simulation loop
 generateInitialData(20);
-<<<<<<< HEAD
-=======
 const latestData = data[data.length - 1];
-health = Math.min(lifetimeHealth, calculateStateHealth(latestData, faults));
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
+health = Math.min(lifetimeHealth, calculateStateHealth(latestData, faults)); // Initialize health correctly
 setInterval(runSimulation, 3000);
 
 // --- REST API ENDPOINTS ---
@@ -215,7 +179,7 @@ app.delete('/api/logs', (req, res) => {
 // --- WEBSOCKET EVENT HANDLERS ---
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
+
   // Send the current state to the newly connected client
   socket.emit('initialData', {
     data: data,
@@ -225,14 +189,14 @@ io.on('connection', (socket) => {
     isShutdown: isShutdown
   });
 
-  // Handle client request to toggle a fault (for simulation)
+  // Handle client request to toggle a fault
   socket.on('toggleFault', (faultType) => {
     if (isShutdown) return;
 
     const current = faults[faultType];
     const next = current === 'OK' ? 'Warning' : current === 'Warning' ? 'Critical' : 'OK';
     faults[faultType] = next;
-    
+
     if (next !== 'OK') {
       const faultNames = {
         overheating: 'Motor Overheating',
@@ -244,42 +208,31 @@ io.on('connection', (socket) => {
       };
       addLog(next === 'Critical' ? 'CRITICAL' : 'HIGH', `${faultNames[faultType]} - ${next}`);
     }
-    
+
     // Broadcast the new fault state to all clients
     io.emit('faultUpdate', faults);
   });
-  
+
   // Handle client request to restart
   socket.on('restartSystem', () => {
     isShutdown = false;
-<<<<<<< HEAD
-=======
-    lifetimeHealth = 100; // --- NEW: Reset lifetime health on restart ---
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
+    lifetimeHealth = 100; // Reset lifetime health
     faults = {
       overheating: 'OK', torqueImbalance: 'OK', encoderLoss: 'OK',
       powerFluctuation: 'OK', gripperMalfunction: 'OK', commDelay: 'OK'
     };
     generateInitialData(20);
-<<<<<<< HEAD
-    const newHealth = calculateHealth(data[data.length - 1], faults);
-=======
-    
-    // --- MODIFIED: Recalculate health on restart ---
+
+    // Recalculate health on restart
     const stateHealth = calculateStateHealth(data[data.length - 1], faults);
-    health = Math.min(lifetimeHealth, stateHealth); 
-    
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
+    health = Math.min(lifetimeHealth, stateHealth);
+
     addLog("INFO", "System restarted successfully");
-    
+
     // Broadcast the full new state to all clients
     io.emit('systemReset', {
       data: data,
-<<<<<<< HEAD
-      health: newHealth,
-=======
       health: health,
->>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
       faults: faults,
       isShutdown: false
     });
