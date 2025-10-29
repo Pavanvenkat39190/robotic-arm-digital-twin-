@@ -18,7 +18,10 @@ const io = new Server(server, {
 const PORT = 4000;
 
 // --- STATE MANAGEMENT (Source of Truth) ---
+<<<<<<< HEAD
 // This is the server's "memory" of the digital twin's state.
+=======
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 let data = [];
 let maintenanceLog = [];
 let isShutdown = false;
@@ -31,6 +34,10 @@ let faults = {
   commDelay: 'OK'
 };
 let health = 100;
+<<<<<<< HEAD
+=======
+let lifetimeHealth = 100; // --- NEW: Tracks gradual wear and tear ---
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 
 // --- HELPER FUNCTIONS (Moved from frontend) ---
 
@@ -65,8 +72,14 @@ function generateInitialData(count) {
   return initialData;
 }
 
+<<<<<<< HEAD
 function calculateHealth(metrics, currentFaults) {
   let h = 100;
+=======
+// --- RENAMED: This now calculates health based on *current state* ---
+function calculateStateHealth(metrics, currentFaults) {
+  let h = 100; // Start at 100 (a perfect *current state*)
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
   if (metrics.motor_temp > 75) h -= (metrics.motor_temp - 75) * 2;
   if (metrics.power > 2000) h -= (metrics.power - 2000) * 0.02;
   if (metrics.anomaly_score > 0.3) h -= (metrics.anomaly_score - 0.3) * 50;
@@ -74,8 +87,12 @@ function calculateHealth(metrics, currentFaults) {
     if (fault === 'Critical') h -= 15;
     else if (fault === 'Warning') h -= 5;
   });
+<<<<<<< HEAD
   health = Math.max(0, Math.min(100, h));
   return health;
+=======
+  return Math.max(0, Math.min(100, h)); // Return the calculated *state* health
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 }
 
 function addLog(severity, message) {
@@ -94,6 +111,14 @@ function addLog(severity, message) {
 function runSimulation() {
   if (isShutdown) return;
 
+<<<<<<< HEAD
+=======
+  // --- NEW: Apply gradual wear and tear ---
+  // This will slowly decrease health every 3 seconds, even if no faults
+  lifetimeHealth -= 0.02; // You can adjust this "wear factor"
+  lifetimeHealth = Math.max(0, lifetimeHealth); // Don't let it go below 0
+
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
   const last = data.length > 0 ? data[data.length - 1] : generateInitialData(1)[0];
 
   const newEntry = {
@@ -127,22 +152,43 @@ function runSimulation() {
   data.push(newEntry);
   if (data.length > 20) data.shift();
 
+<<<<<<< HEAD
   const newHealth = calculateHealth(newEntry, faults);
   
   if (newHealth <= 0) {
+=======
+  // --- MODIFIED: Combine state health and lifetime health ---
+  const stateHealth = calculateStateHealth(newEntry, faults);
+  // The system's true health is the *worse* of its lifetime wear or its current state
+  health = Math.min(lifetimeHealth, stateHealth);
+  health = Math.max(0, Math.min(100, health)); // Clamp the final value
+  
+  if (health <= 0) {
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
     isShutdown = true;
     addLog("CRITICAL", "Emergency shutdown - Health depleted");
     io.emit('shutdown', "🚨 EMERGENCY SHUTDOWN");
     return;
   }
   
+<<<<<<< HEAD
   // Broadcast the new data point to all connected clients
   io.emit('newData', newEntry);
   io.emit('healthUpdate', newHealth);
+=======
+  // Broadcast the new combined data point to all connected clients
+  io.emit('newData', newEntry);
+  io.emit('healthUpdate', health);
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 }
 
 // Start the simulation loop
 generateInitialData(20);
+<<<<<<< HEAD
+=======
+const latestData = data[data.length - 1];
+health = Math.min(lifetimeHealth, calculateStateHealth(latestData, faults));
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
 setInterval(runSimulation, 3000);
 
 // --- REST API ENDPOINTS ---
@@ -206,18 +252,34 @@ io.on('connection', (socket) => {
   // Handle client request to restart
   socket.on('restartSystem', () => {
     isShutdown = false;
+<<<<<<< HEAD
+=======
+    lifetimeHealth = 100; // --- NEW: Reset lifetime health on restart ---
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
     faults = {
       overheating: 'OK', torqueImbalance: 'OK', encoderLoss: 'OK',
       powerFluctuation: 'OK', gripperMalfunction: 'OK', commDelay: 'OK'
     };
     generateInitialData(20);
+<<<<<<< HEAD
     const newHealth = calculateHealth(data[data.length - 1], faults);
+=======
+    
+    // --- MODIFIED: Recalculate health on restart ---
+    const stateHealth = calculateStateHealth(data[data.length - 1], faults);
+    health = Math.min(lifetimeHealth, stateHealth); 
+    
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
     addLog("INFO", "System restarted successfully");
     
     // Broadcast the full new state to all clients
     io.emit('systemReset', {
       data: data,
+<<<<<<< HEAD
       health: newHealth,
+=======
+      health: health,
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
       faults: faults,
       isShutdown: false
     });

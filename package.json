@@ -4,10 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+<<<<<<< HEAD
     "start:frontend": "npm start --prefix frontend",
     "start:backend": "node backend/server.js",
     "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\""
   },
+=======
+  "start:frontend": "npm start --prefix frontend",
+  "start:backend": "node backend/server.js",
+  "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\""
+},
+>>>>>>> 52ceaf807496c0aa4fe1e63f596031bb2f64c39b
   "keywords": [],
   "author": "",
   "license": "ISC",
