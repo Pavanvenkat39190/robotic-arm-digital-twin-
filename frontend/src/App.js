@@ -49,71 +49,24 @@ function ArmSegment({ position, rotation, length, radius, jointRadius, color, jo
 }
 
 // Main 3D Arm Component
-function RoboticArm3D({ jointData, isDarkMode }) { // Added isDarkMode prop
-  // Provide default values if jointData is empty initially
+function RoboticArm3D({ jointData, isDarkMode }) {
+  console.log('Joint Data:', jointData); // Debug log
+  
+  // Add safety checks
+  if (!jointData) {
+    return <div>Loading arm data...</div>;
+  }
+  
   const angles = {
-    j1: jointData?.j1_angle || 0,
-    j2: jointData?.j2_angle || 0,
-    j3: jointData?.j3_angle || 0,
-    j4: jointData?.j4_angle || 0,
-    j5: jointData?.j5_angle || 0,
-    j6: jointData?.j6_angle || 0,
+    j1: jointData?.j1_angle ?? 0,  // Use ?? instead of ||
+    j2: jointData?.j2_angle ?? 0,
+    j3: jointData?.j3_angle ?? 0,
+    j4: jointData?.j4_angle ?? 0,
+    j5: jointData?.j5_angle ?? 0,
+    j6: jointData?.j6_angle ?? 0,
   };
-
-  // Define segment lengths and radii (adjust these for desired proportions)
-  const segmentLength1 = 1.0; const segmentLength2 = 0.8; const segmentLength3 = 0.6;
-  const segmentLength4 = 0.4; const segmentLength5 = 0.3; const segmentLength6 = 0.15;
-  const radius = 0.08; const jointRadius = 0.12;
-
-  return (
-    <Canvas
-        camera={{ position: [2.5, 2, 2.5], fov: 50 }}
-        style={{ background: 'var(--color-bg-tertiary)', borderRadius: '16px', border: `1px solid var(--color-border)` }}
-        shadows
-    >
-      {/* Lighting */}
-      <ambientLight intensity={isDarkMode ? 0.4 : 0.7} />
-      <directionalLight position={[5, 8, 5]} intensity={isDarkMode ? 0.8 : 1.2} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} shadow-camera-far={50} shadow-camera-left={-10} shadow-camera-right={10} shadow-camera-top={10} shadow-camera-bottom={-10} />
-      <directionalLight position={[-5, -3, -2]} intensity={isDarkMode ? 0.3 : 0.5} />
-      <hemisphereLight intensity={isDarkMode ? 0.2 : 0.4} groundColor={isDarkMode ? "#333" : "#aaa"} />
-      {/* Controls */}
-      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
-      {/* Base */}
-      <Cylinder args={[0.4, 0.4, 0.2, 32]} position={[0, 0.1, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color={isDarkMode ? "#374151" : "#6b7280"} roughness={0.7} metalness={0.2} />
-      </Cylinder>
-      {/* Arm Segments */}
-      <ArmSegment position={[0, 0.2, 0]} rotation={[0, angles.j1, 0]} length={segmentLength1} radius={radius} jointRadius={jointRadius} color={isDarkMode ? "#4b5563": "#6b7280"} jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-        <ArmSegment position={[0, segmentLength1, 0]} rotation={[0, 0, angles.j2]} length={segmentLength2} radius={radius * 0.9} jointRadius={jointRadius * 0.9} color="#3b82f6" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-          <ArmSegment position={[0, segmentLength2, 0]} rotation={[0, 0, angles.j3]} length={segmentLength3} radius={radius * 0.8} jointRadius={jointRadius * 0.8} color="#10b981" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-            <ArmSegment position={[0, segmentLength3, 0]} rotation={[0, angles.j4, 0]} length={segmentLength4} radius={radius * 0.7} jointRadius={jointRadius * 0.7} color="#f59e0b" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-              <ArmSegment position={[0, segmentLength4, 0]} rotation={[0, 0, angles.j5]} length={segmentLength5} radius={radius * 0.6} jointRadius={jointRadius * 0.6} color="#ef4444" jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-                <ArmSegment position={[0, segmentLength5, 0]} rotation={[0, angles.j6, 0]} length={segmentLength6} radius={radius * 0.5} jointRadius={jointRadius * 0.5} color={isDarkMode ? "#4b5563": "#6b7280"} jointColor={isDarkMode ? "#9ca3af": "#cbd5e1"}>
-                  {/* End Effector */}
-                  <group position={[0, segmentLength6 + 0.05, 0]}>
-                    <DreiBox args={[0.12, 0.08, 0.12]} position={[0, 0, 0]} castShadow>
-                       <meshStandardMaterial color={isDarkMode ? "#9ca3af" : "#4b5563"} roughness={0.8}/>
-                    </DreiBox>
-                     <DreiBox args={[0.03, 0.12, 0.03]} position={[-0.045, -0.06, 0]} castShadow>
-                       <meshStandardMaterial color={isDarkMode ? "#e5e7eb" : "#d1d5db"} metalness={0.8} roughness={0.3}/>
-                     </DreiBox>
-                      <DreiBox args={[0.03, 0.12, 0.03]} position={[0.045, -0.06, 0]} castShadow>
-                       <meshStandardMaterial color={isDarkMode ? "#e5e7eb" : "#d1d5db"} metalness={0.8} roughness={0.3}/>
-                     </DreiBox>
-                  </group>
-                </ArmSegment>
-              </ArmSegment>
-            </ArmSegment>
-          </ArmSegment>
-        </ArmSegment>
-      </ArmSegment>
-      {/* Ground Plane */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[10, 10]} />
-        <meshStandardMaterial color={isDarkMode ? "#111827" : "#d1d5db"} roughness={0.9} />
-      </mesh>
-    </Canvas>
-  );
+  
+  // Rest of code...
 }
 // --- END 3D Arm Component Code ---
 
