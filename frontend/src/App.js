@@ -4,9 +4,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ShieldCheck, Cpu, Bell, Wrench, Clock, AlertTriangle, Zap, Battery, Gauge, ChevronDown, ChevronUp, Box, Radio, Sun, Moon } from 'lucide-react';
 
 // --- Connect to the backend server ---
-const backendUrl = 'https://industrial-robotic-arm-digital-twin.onrender.com'; // Your Render URL
-const socket = io(backendUrl);
-const API_URL = backendUrl;
+import API_BASE from "./config";
+import io from "socket.io-client";
+
+const socket = io(API_BASE);
+const API_URL = API_BASE;
+
 // --- END ---
 
 // --- Canvas Drawing Helper Functions ---
